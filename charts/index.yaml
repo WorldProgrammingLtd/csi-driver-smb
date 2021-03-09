@@ -11,6 +11,15 @@ entries:
     - https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts/latest/csi-driver-smb-v0.7.0.tgz
     version: v0.7.0
   - apiVersion: v1
+    appVersion: v0.7.0
+    created: 2021-02-05T13:24:53.89945995Z
+    description: SMB CSI Driver for Kubernetes
+    digest: dbe5541234018b40c934fc425ce085d3d9da2b52e8198335f4568db51cadd884
+    name: csi-driver-smb
+    urls:
+    - https://raw.githubusercontent.com/WorldProgrammingLtd/csi-driver-smb/krb5/charts/latest/csi-driver-smb-v0.7.0.tgz
+    version: v0.7.0
+  - apiVersion: v1
     appVersion: v0.6.0
     created: 2021-02-05T13:24:53.900854158Z
     description: SMB CSI Driver for Kubernetes

@@ -26,6 +26,9 @@ endif
 endif
 IMAGE_TAG = $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
 IMAGE_TAG_LATEST = $(REGISTRY)/$(IMAGE_NAME):latest
+KRB5_IMAGE_NAME ?= smb-krb5
+KRB5_IMAGE_TAG = $(REGISTRY)/$(KRB5_IMAGE_NAME):$(IMAGE_VERSION)
+KRB5_IMAGE_TAG_LATEST = $(REGISTRY)/$(KRB5_IMAGE_NAME):latest
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS ?= "-X ${PKG}/pkg/smb.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/smb.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/smb.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
 E2E_HELM_OPTIONS ?= --set image.smb.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.smb.tag=$(IMAGE_VERSION)
@@ -123,6 +126,11 @@ smb-windows:
 smb-darwin:
 	CGO_ENABLED=0 GOOS=darwin go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/smbplugin ./pkg/smbplugin
 
+.PHONY: krb5
+krb5:
+	docker buildx build --pull --output=type=$(OUTPUT_TYPE) --platform="linux/$(ARCH)" \
+		-t $(KRB5_IMAGE_TAG)-linux-$(ARCH) --build-arg ARCH=$(ARCH) -f ./krb5/Dockerfile ./krb5
+
 .PHONY: container
 container: smb
 	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/smbplugin/dev.Dockerfile .
@@ -148,6 +156,7 @@ container-all: smb-windows
 	for arch in $(ALL_ARCH.linux); do \
 		ARCH=$${arch} $(MAKE) smb; \
 		ARCH=$${arch} $(MAKE) container-linux; \
+		ARCH=$${arch} $(MAKE) krb5; \
 	done
 	for osversion in $(ALL_OSVERSIONS.windows); do \
 		OSVERSION=$${osversion} $(MAKE) container-windows; \
@@ -168,9 +177,13 @@ push-manifest:
 		done; \
 	done
 	docker manifest push --purge $(IMAGE_TAG)
+	docker manifest create --amend $(KRB5_IMAGE_TAG) $(foreach osarch, $(ALL_OS_ARCH.linux) $(IMAGE_TAG)-${osarch})
+	docker manifest push --purge $(KRB5_IMAGE_TAG)
 ifdef PUBLISH
 	docker manifest create $(IMAGE_TAG_LATEST) $(foreach osarch, $(ALL_OS_ARCH), $(IMAGE_TAG)-${osarch})
 	docker manifest inspect $(IMAGE_TAG_LATEST)
+	docker manifest create $(KRB5_IMAGE_TAG_LATEST) $(foreach osarc, $(ALL_OS_ARCH.linux) $(KRB5_IMAGE_TAG)-${osarch})
+	docker manifest inspect $(KRB5_IMAGE_TAG_LATEST)
 endif
 
 .PHONY: push-latest

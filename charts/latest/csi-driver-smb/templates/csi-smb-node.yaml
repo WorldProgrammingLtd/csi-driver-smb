@@ -108,6 +108,13 @@ spec:
             - mountPath: {{ .Values.kubelet.linuxPath }}/
               mountPropagation: Bidirectional
               name: mountpoint-dir
+{{- if .Values.kerberos.enabled }}
+            - mountPath: /etc/krb5.conf
+              name: krb5-conf
+              subPath: krb5.conf
+            - mountPath: /var/krb5/ccache
+              name: krb5-cache
+{{- end }}
           resources:
             limits:
               cpu: 200m
@@ -115,6 +122,33 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
+{{- if .Values.kerberos.enabled }}
+        - name: krb5
+          image: "{{ .Values.kerberos.image.repository }}:{{ .Values.kerberos.image.tag }}"
+          imagePullPolicy: {{ .Values.kerberos.image.pullPolicy }}
+          env:
+            - name: KRB5_PRINCIPAL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.kerberos.credentials }}
+                  key: principal
+          volumeMounts:
+            - mountPath: /etc/krb5.conf
+              name: krb5-conf
+              subPath: krb5.conf
+            - mountPath: /var/krb5/smb/krb5.keytab
+              name: krb5-keytab
+              subPath: krb5.keytab
+            - mountPath: /var/krb5/ccache
+              name: krb5-cache
+          resources:
+            limits:
+              cpu: 200m
+              memory: 200Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+{{- end }}
       volumes:
         - hostPath:
             path: {{ .Values.kubelet.linuxPath }}/plugins/smb.csi.k8s.io
@@ -128,4 +162,22 @@ spec:
             path: {{ .Values.kubelet.linuxPath }}/plugins_registry/
             type: DirectoryOrCreate
           name: registration-dir
+{{- if .Values.kerberos.enabled }}
+        - name: krb5-cache
+          emptyDir:
+        - name: krb5-conf
+          configMap:
+            name: {{ .Values.kerberos.config }}
+            items:
+              - key: krb5.conf
+                path: krb5.conf
+                mode: 0644
+        - name: krb5-keytab
+          secret:
+            secretName: {{ .Values.kerberos.credentials }}
+            items:
+              - key: krb5.keytab
+                path: krb5.keytab
+                mode: 0600
+{{- end }}
 {{- end -}}

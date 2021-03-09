@@ -50,3 +50,12 @@ windows:
 kubelet:
   linuxPath: /var/lib/kubelet
   windowsPath: 'C:\var\lib\kubelet'
+
+kerberos:
+  enabled: false
+  credentials: krb5-secret
+  config: krb5-configmap
+  image:
+    repository: mcr.microsoft.com/k8s/csi/smb-krb5
+    tag: latest
+    pullPolicy: IfNotPresent

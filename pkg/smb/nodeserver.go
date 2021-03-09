@@ -201,7 +201,20 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		if err := os.MkdirAll(targetPath, 0750); err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("MkdirAll %s failed with error: %v", targetPath, err))
 		}
-		sensitiveMountOptions = []string{fmt.Sprintf("%s=%s,%s=%s", usernameField, username, passwordField, password)}
+
+		// If we're using Kerberos, we don't need to specify credentials
+		kerberized := false
+		for _, opt := range mountFlags {
+			if strings.ToLower(opt) == "krb5" {
+				kerberized = true
+				break
+			}
+		}
+
+		if !kerberized {
+			sensitiveMountOptions = []string{fmt.Sprintf("%s=%s,%s=%s", usernameField, username, passwordField, password)}
+		}
+
 		mountOptions = mountFlags
 		if domain != "" {
 			mountOptions = append(mountOptions, fmt.Sprintf("%s=%s", domainField, domain))
